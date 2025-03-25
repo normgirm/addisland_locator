@@ -17,12 +17,20 @@
 <body>
     <h2>Addis Ababa Land Title Deed Checker</h2>
     <form method="POST">
-        <input type="text" name="title_deed" placeholder="Enter Title Deed Number" required>
-        <button type="submit">Check</button>
-        <button id="open_in_google_map_btn">Google Map</button>
-        <button id="open_in_addisland_btn">Addisland Doc</button>
+        <!-- First line: Label and input box -->
+        <div>
+            <label for="title_deed">Enter Title Deed Number:</label>
+            <input type="text" id="title_deed" name="title_deed" placeholder="e.g. AK1181145161502962" required>
+        </div>
+    
+        <!-- Second line: Buttons -->
+        <div style="margin-top: 10px;">
+            <button type="submit">Check</button>
+            <button id="open_in_google_map_btn">Google Map</button>
+            <button id="open_in_addisland_btn">Addisland Doc</button>
+        </div>
     </form>
-
+    
     {% if validity_html %}
         <div id="validity-container">
             {{ validity_html | safe }}
