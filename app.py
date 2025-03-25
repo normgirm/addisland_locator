@@ -80,7 +80,7 @@ def extract_coordinates_from_addisland(title_deed_number):
         #print(response.text[:1000])  # Print the first 1000 characters of the page
     except requests.exceptions.RequestException as e:
         print(f"❌ Failed to fetch HTML: {e}")
-        return None
+        return None, "❌ Server Problem: Failed to get response. Please retry later."
 
 
     try:
@@ -135,11 +135,11 @@ def extract_coordinates_from_addisland(title_deed_number):
             return {'easting_northing_matrix':coordinate_data,'addisland_url':url}, 'Success'
         else:
             print("❌ No valid coordinates found")
-            return None, "❌ No valid coordinates found. Please enter correct title deed number."
+            return None, "❌ No valid coordinates found."
 
     except Exception as e:
         print(f"Error fetching data: {e}")
-        return None, "❌ Server Problem: Failed to get response. Please retry later."
+        return None, "❌ Invalid Title Deed Number: Please enter correct title deed number."
 
 
 def convert_eastings_northings_to_lats_lons(easting_northing_matrix):
