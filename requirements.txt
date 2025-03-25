@@ -8,3 +8,4 @@ wtforms==3.0.1
 Werkzeug==2.2.2
 utm==0.8.0
 beautifulsoup4==4.12.3
+scipy==1.15.2
