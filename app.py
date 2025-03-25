@@ -224,7 +224,7 @@ def index():
                     addisland_href = out_dict['addisland_url']
 
                     # Create table rows
-                    table_rows = "".join(f"<tr><td>{lat:.5f}</td><td>{lon:.5f}</td></tr>" for lat, lon in zip(computed_lats, computed_lons))
+                    table_rows = "".join(f"<tr><td>{lat:.8f}</td><td>{lon:.8f}</td></tr>" for lat, lon in zip(computed_lats, computed_lons))
 
                     # Construct the complete HTML
                     validity_html = f"""
