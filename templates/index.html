@@ -10,16 +10,24 @@
         body { font-family: Arial, sans-serif; text-align: center; }
         form { margin-bottom: 20px; }
         input, button { padding: 10px; font-size: 16px; }
+        #validity-container { width: 80%; margin: auto; margin-bottom: 20px; }
         #map-container { width: 80%; margin: auto; }
     </style>
 </head>
 <body>
-    <h2>Enter Title Deed Number</h2>
+    <h2>Addis Ababa Land Title Deed Checker</h2>
     <form method="POST">
         <input type="text" name="title_deed" placeholder="Enter Title Deed Number" required>
-        <button type="submit">Show Map</button>
-        <button id="save_title_deed_pdf_btn">Save As PDF</button>
+        <button type="submit">Check</button>
+        <button id="open_in_google_map_btn">Google Map</button>
+        <button id="open_in_addisland_btn">Addisland Doc</button>
     </form>
+
+    {% if validity_html %}
+        <div id="validity-container">
+            {{ validity_html | safe }}
+        </div>
+    {% endif %}
 
     {% if map_html %}
         <div id="map-container">
@@ -27,14 +35,25 @@
         </div>
     {% endif %}
 
+    
     <script>
         // Get the link passed from Flask
-        const link = "{{ save_as_pdf_link }}";  // Flask variable injected into the HTML
+        const google_map_link = "{{ google_map_href }}";  // Flask variable injected into the HTML
+        const addisland_link = "{{ addisland_href }}";  // Flask variable injected into the HTML
 
         // Set up the button click event to open the link
-        document.getElementById("save_title_deed_pdf_btn").addEventListener("click", function() {
-            if (link) {
-                window.open(link, "_blank");  // Open the link in a new tab
+        document.getElementById("open_in_google_map_btn").addEventListener("click", function() {
+            if (google_map_link) {
+                window.open(google_map_link, "_blank");  // Open the link in a new tab
+            } else {
+                alert("Link is not available.");
+            }
+        });
+
+        // Set up the button click event to open the link
+        document.getElementById("open_in_addisland_btn").addEventListener("click", function() {
+            if (addisland_link) {
+                window.open(addisland_link, "_blank");  // Open the link in a new tab
             } else {
                 alert("Link is not available.");
             }

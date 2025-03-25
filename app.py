@@ -134,20 +134,20 @@ def extract_coordinates_from_addisland(title_deed_number):
 
         print(f"📌 Found Save AS PDF Link {i}: {save_as_pdf_link}")
 
+
         if coordinate_data:
-            return coordinate_data,save_as_pdf_link
+            return {'easting_northing_matrix':coordinate_data,'addisland_url':url}
         else:
-            return None, None
+            return None
 
     except Exception as e:
         print(f"Error fetching data: {e}")
-        return None, None
+        return None
 
 
-
-def convert_and_plot(easting_northing_matrix, title="Land Plot"):
+def convert_eastings_northings_to_lats_lons(easting_northing_matrix):
     """
-    Converts Easting/Northing to Lat/Lon, embeds the Folium map.
+    Converts Easting/Northing to Lat/Lon, 
     """
     if not easting_northing_matrix:
         return None
@@ -171,6 +171,14 @@ def convert_and_plot(easting_northing_matrix, title="Land Plot"):
     computed_lats.append(computed_lats[0])
     computed_lons.append(computed_lons[0])
 
+    return computed_lats,computed_lons
+
+
+def plot_lats_lons_on_map(computed_lats,computed_lons, title="Land Plot"):
+    """
+    Takes in Lat/Lon, embeds the Folium map.
+    """
+    
     center_lat, center_lon = np.mean(computed_lats), np.mean(computed_lons)
     # ESRI World Imagery (Best Alternative to Google Satellite)
     map_ESRI_World_Imagery = folium.Map(location=[center_lat, center_lon], zoom_start=18, max_zoom=109, tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", attr="Tiles © Esri &mdash; Source: Esri, Maxar, Earthstar Geographics")
@@ -190,24 +198,57 @@ def convert_and_plot(easting_northing_matrix, title="Land Plot"):
 
     return map_._repr_html_()  # Return HTML for embedding
 
+
 @app.route("/", methods=["GET", "POST"])  # Ensure POST is allowed
 def index():
     map_html = None
     title_deed_number = ""
-    save_as_pdf_link = None
-    
+    validity_html = 'Enter Title Deed Number and Click Check'
+    google_map_href = 'https://maps.app.goo.gl/jr4S1yaX8NeVXFsa8'
+    addisland_href = 'https://www.addisland.gov.et/'
+
     if request.method == "POST":  # Handle form submission
         title_deed_number = request.form.get("title_deed", "").strip()
 
         if title_deed_number:
-            easting_northing_matrix,save_as_pdf_link = extract_coordinates_from_addisland(title_deed_number)
-            if easting_northing_matrix:
-                map_html = convert_and_plot(easting_northing_matrix, title=title_deed_number)
-                print("✅ Plot the coordinates over Folium map!")
-            else:
-                map_html = "<p style='color:red;'>Failed to retrieve coordinates.</p>"
+            validity_html = 'Connecting to server ...'
+            out_dict = extract_coordinates_from_addisland(title_deed_number)
 
-    return render_template("index.html", map_html=map_html, title_deed_number=title_deed_number, save_as_pdf_link = save_as_pdf_link)
+            if out_dict:
+                easting_northing_matrix = out_dict['easting_northing_matrix']
+                
+                if easting_northing_matrix:
+                    computed_lats,computed_lons = convert_eastings_northings_to_lats_lons(easting_northing_matrix)
+                    center_lat, center_lon = np.mean(computed_lats), np.mean(computed_lons)
+                    google_map_href = f"https://www.google.com/maps?q={center_lat},{center_lon}"
+                    addisland_href = out_dict['addisland_url']
+
+                    # Create table rows
+                    table_rows = "".join(f"<tr><td>{lat}</td><td>{lon}</td></tr>" for lat, lon in zip(computed_lats, computed_lons))
+
+                    # Construct the complete HTML
+                    validity_html = f"""
+                        <p style='color:green; text-align: center;'>✅ Valid Title Deed: Successfully retrieved coordinates.</p>
+                        <table border='1' style='border-collapse: collapse; width: 50%; margin: auto; text-align: center;'>
+                            <tr>
+                                <th>Latitude</th>
+                                <th>Longitude</th>
+                            </tr>
+                            {table_rows}
+                        </table>
+                    """
+
+                    map_html = plot_lats_lons_on_map(computed_lats,computed_lons, title=title_deed_number)
+                    
+                    #map_html = convert_and_plot(easting_northing_matrix, title=title_deed_number)
+                    print("✅ Plot the coordinates over Folium map!")
+                else:
+                    #map_html = "<p style='color:red;'>Failed to retrieve coordinates.</p>"
+                    validity_html = "<p style='color:red;'>❌ Invalid Input: Failed to retrieve coordinates.</p>"
+            else:
+                validity_html = "<p style='color:red;'>❌ Server Problem: Failed to get response. Please retry later.</p>"
+
+    return render_template("index.html", map_html=map_html, validity_html = validity_html, title_deed_number=title_deed_number, google_map_href = google_map_href, addisland_href = addisland_href)
 
 if __name__ == "__main__":
     app.run(debug=True)
