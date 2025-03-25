@@ -120,29 +120,26 @@ def extract_coordinates_from_addisland(title_deed_number):
                 else:
                     pass
                     #print(f"⚠️ Skipping non-numeric row: {x}, {y}")
-
-        if not coordinate_data:
-            print("❌ No valid coordinates found")
-            return None
         
-        # Regular Expression to Find the PDF Export Link
-        pdf_pattern = re.compile(r"https:\/\/www\.addisland\.gov\.et\/Reserved\.ReportViewerWebControl\.axd\?[^\"\']*Format=PDF")
+        ## Regular Expression to Find the PDF Export Link
+        #pdf_pattern = re.compile(r"https:\/\/www\.addisland\.gov\.et\/Reserved\.ReportViewerWebControl\.axd\?[^\"\']*Format=PDF")
 
-        # Extract All Matching PDF Links
-        # Find the link (using regex if necessary)
-        save_as_pdf_link = soup.find('a', href=pdf_pattern)
+        ## Extract All Matching PDF Links
+        ## Find the link (using regex if necessary)
+        #save_as_pdf_link = soup.find('a', href=pdf_pattern)
 
-        print(f"📌 Found Save AS PDF Link {i}: {save_as_pdf_link}")
+        #print(f"📌 Found Save AS PDF Link {i}: {save_as_pdf_link}")
 
 
         if coordinate_data:
-            return {'easting_northing_matrix':coordinate_data,'addisland_url':url}
+            return {'easting_northing_matrix':coordinate_data,'addisland_url':url}, 'Success'
         else:
-            return None
+            print("❌ No valid coordinates found")
+            return None, "❌ No valid coordinates found. Please enter correct title deed number."
 
     except Exception as e:
         print(f"Error fetching data: {e}")
-        return None
+        return None, "❌ Server Problem: Failed to get response. Please retry later."
 
 
 def convert_eastings_northings_to_lats_lons(easting_northing_matrix):
@@ -212,7 +209,7 @@ def index():
 
         if title_deed_number:
             validity_html = 'Connecting to server ...'
-            out_dict = extract_coordinates_from_addisland(title_deed_number)
+            out_dict, reply_msg = extract_coordinates_from_addisland(title_deed_number)
 
             if out_dict:
                 easting_northing_matrix = out_dict['easting_northing_matrix']
@@ -247,7 +244,7 @@ def index():
                     #map_html = "<p style='color:red;'>Failed to retrieve coordinates.</p>"
                     validity_html = "<p style='color:red;'>❌ Invalid Input: Failed to retrieve coordinates.</p>"
             else:
-                validity_html = "<p style='color:red;'>❌ Server Problem: Failed to get response. Please retry later.</p>"
+                validity_html = f"<p style='color:red;'> {reply_msg} .</p>"
 
     return render_template("index.html", map_html=map_html, validity_html = validity_html, title_deed_number=title_deed_number, google_map_href = google_map_href, addisland_href = addisland_href)
 
