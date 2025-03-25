@@ -229,6 +229,7 @@ def index():
                     # Construct the complete HTML
                     validity_html = f"""
                         <p style='color:green; text-align: center;'>✅ Valid Title Deed: Successfully retrieved coordinates.</p>
+                        <p style='color:black; text-align: center;'> Coordinates of {title_deed_number}.</p>
                         <table border='1' style='border-collapse: collapse; width: 50%; margin: auto; text-align: center;'>
                             <tr>
                                 <th>Latitude</th>
