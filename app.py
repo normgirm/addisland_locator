@@ -190,11 +190,6 @@ def convert_and_plot(easting_northing_matrix, title="Land Plot"):
 
     return map_._repr_html_()  # Return HTML for embedding
 
-
-
-
-
-
 @app.route("/", methods=["GET", "POST"])  # Ensure POST is allowed
 def index():
     map_html = None
@@ -213,28 +208,6 @@ def index():
                 map_html = "<p style='color:red;'>Failed to retrieve coordinates.</p>"
 
     return render_template("index.html", map_html=map_html, title_deed_number=title_deed_number, save_as_pdf_link = save_as_pdf_link)
-
-# 🚀 NEW ROUTE: Extract PDF Export Link
-@app.route("/extract_pdf_links")
-def extract_pdf_links():
-    target_url = "https://www.addisland.gov.et/YOUR_PAGE_CONTAINING_LINKS"
-
-    try:
-        response = requests.get(target_url)
-        response.raise_for_status()
-        soup = BeautifulSoup(response.text, 'html.parser')
-
-        # Regular Expression to Find the PDF Export Link
-        pdf_pattern = re.compile(r"https:\/\/www\.addisland\.gov\.et\/Reserved\.ReportViewerWebControl\.axd\?[^\"\']*Format=PDF")
-
-        # Extract All Matching PDF Links
-        pdf_links = [a["href"] for a in soup.find_all("a", href=True) if pdf_pattern.search(a["href"])]
-
-        return jsonify({"pdf_links": pdf_links}), 200 if pdf_links else (jsonify({"error": "No PDF export links found."}), 404)
-
-    except requests.RequestException as e:
-        return jsonify({"error": f"Failed to fetch page: {str(e)}"}), 500
-    
 
 if __name__ == "__main__":
     app.run(debug=True)
