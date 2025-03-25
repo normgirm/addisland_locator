@@ -18,6 +18,7 @@
     <form method="POST">
         <input type="text" name="title_deed" placeholder="Enter Title Deed Number" required>
         <button type="submit">Show Map</button>
+        <button id="save_title_deed_pdf_btn">Save As PDF</button>
     </form>
 
     {% if map_html %}
@@ -25,5 +26,20 @@
             {{ map_html | safe }}
         </div>
     {% endif %}
+
+    <script>
+        // Get the link passed from Flask
+        const link = "{{ save_as_pdf_link }}";  // Flask variable injected into the HTML
+
+        // Set up the button click event to open the link
+        document.getElementById("save_title_deed_pdf_btn").addEventListener("click", function() {
+            if (link) {
+                window.open(link, "_blank");  // Open the link in a new tab
+            } else {
+                alert("Link is not available.");
+            }
+        });
+    </script>
+
 </body>
 </html>

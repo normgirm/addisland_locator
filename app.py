@@ -5,6 +5,7 @@ import numpy as np
 from bs4 import BeautifulSoup
 import folium
 from scipy.interpolate import RBFInterpolator
+import re
 
 app = Flask(__name__)
 
@@ -84,6 +85,11 @@ def extract_coordinates_from_addisland(title_deed_number):
 
     try:
         soup = BeautifulSoup(response.text, "html.parser")
+
+        # Save the prettified HTML to a text file with utf-8 encoding
+        #with open('temp_html_output.txt', 'w', encoding='utf-8') as file:
+        #    file.write(soup.prettify())
+
         tables = soup.find_all("table")
 
         selected_table = None
@@ -118,52 +124,24 @@ def extract_coordinates_from_addisland(title_deed_number):
         if not coordinate_data:
             print("❌ No valid coordinates found")
             return None
+        
+        # Regular Expression to Find the PDF Export Link
+        pdf_pattern = re.compile(r"https:\/\/www\.addisland\.gov\.et\/Reserved\.ReportViewerWebControl\.axd\?[^\"\']*Format=PDF")
 
+        # Extract All Matching PDF Links
+        # Find the link (using regex if necessary)
+        save_as_pdf_link = soup.find('a', href=pdf_pattern)
 
-        return coordinate_data if coordinate_data else None
+        print(f"📌 Found Save AS PDF Link {i}: {save_as_pdf_link}")
+
+        if coordinate_data:
+            return coordinate_data,save_as_pdf_link
+        else:
+            return None, None
 
     except Exception as e:
         print(f"Error fetching data: {e}")
-        return None
-
-def convert_and_plot_folium(easting_northing_matrix, title="Land Plot"):
-    """
-    Converts Easting/Northing to Lat/Lon, embeds the Folium map.
-    """
-    if not easting_northing_matrix:
-        return None
-    
-    # Determine UTM zone (default 37 for Addis Ababa)
-    zone = 37
-    computed_lats, computed_lons = [], []
-    
-    eastings = np.array(easting_northing_matrix)[:, 0]
-    northings = np.array(easting_northing_matrix)[:, 1]
-
-    # Calibration values for correcting positions
-    precalib_easting_northing_matrix = generate_precalibrated_matrix(easting_northing_matrix)
-    
-    for easting, northing in precalib_easting_northing_matrix:
-        lat, lon = utm.to_latlon(easting, northing, zone, northern=True)
-        computed_lats.append(lat)
-        computed_lons.append(lon)
-
-    # Close the plot shape
-    computed_lats.append(computed_lats[0])
-    computed_lons.append(computed_lons[0])
-
-    center_lat, center_lon = np.mean(computed_lats), np.mean(computed_lons)
-    map_ = folium.Map(location=[center_lat, center_lon], zoom_start=17, max_zoom=19, tiles="OpenStreetMap")
-    
-    
-    # Add markers
-    for lat, lon in zip(computed_lats[:-1], computed_lons[:-1]):
-        folium.Marker([lat, lon], popup="Point").add_to(map_)
-
-    # Draw boundary
-    folium.PolyLine(list(zip(computed_lats, computed_lons)), color="blue", weight=2.5, opacity=1).add_to(map_)
-
-    return map_._repr_html_()  # Return HTML for embedding
+        return None, None
 
 
 
@@ -195,35 +173,13 @@ def convert_and_plot(easting_northing_matrix, title="Land Plot"):
 
     center_lat, center_lon = np.mean(computed_lats), np.mean(computed_lons)
     # ESRI World Imagery (Best Alternative to Google Satellite)
-    map_ESRI_World_Imagery = folium.Map(
-        location=[center_lat, center_lon], 
-        zoom_start=20, max_zoom=109,
-        tiles="Esri.WorldImagery",
-        attr="Tiles © Esri &mdash; Source: Esri, Maxar, Earthstar Geographics"
-    )
-    # CartoDB Voyager (Another High-Quality Alternative)
-    map_CartoDB_Voyager = folium.Map(
-        location=[center_lat, center_lon], 
-        zoom_start=20, 
-        tiles="CartoDB.Voyager",
-        attr="© OpenStreetMap contributors & CARTO"
-    )
+    map_ESRI_World_Imagery = folium.Map(location=[center_lat, center_lon], zoom_start=18, max_zoom=109, tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", attr="Tiles © Esri &mdash; Source: Esri, Maxar, Earthstar Geographics")
     # Stamen Terrain (For a Topographic View)
-    map_Stamen_Terrain = folium.Map(
-        location=[center_lat, center_lon], 
-        zoom_start=25, 
-        tiles="Stamen.Terrain",
-        #tiles="https://{s}.tile.stamen.com/terrain/{z}/{x}/{y}.jpg",
-        attr="Map tiles by Stamen Design, under CC BY 3.0. Data by OpenStreetMap, under ODbL."
-    )
+    map_Stamen_Terrain = folium.Map(location=[center_lat, center_lon], zoom_start=18, max_zoom=109, tiles="https://stamen-tiles.a.ssl.fastly.net/terrain/{z}/{x}/{y}.jpg", attr="Map tiles by Stamen Design, under CC BY 3.0. Data by OpenStreetMap, under ODbL.")
 
     map_ = map_ESRI_World_Imagery
-    #map_ = map_CartoDB_Voyager
     #map_ = map_Stamen_Terrain
 
-    #map_ = folium.Map(location=[center_lat, center_lon], zoom_start=17, max_zoom=109, tiles="Stamen.Terrain",attr="Map tiles by Stamen Design, under CC BY 3.0. Data by OpenStreetMap, under ODbL.")
-    #map_ = folium.Map(location=[center_lat, center_lon], zoom_start=20, max_zoom=109, tiles="Esri.WorldImagery") # similar to google sattelite view but zooming in too much no data
-    #map_ = folium.Map(location=[center_lat, center_lon], zoom_start=20, max_zoom=109, tiles="OpenStreetMap")
     
     # Add markers
     for lat, lon in zip(computed_lats[:-1], computed_lons[:-1]):
@@ -243,19 +199,42 @@ def convert_and_plot(easting_northing_matrix, title="Land Plot"):
 def index():
     map_html = None
     title_deed_number = ""
+    save_as_pdf_link = None
     
     if request.method == "POST":  # Handle form submission
         title_deed_number = request.form.get("title_deed", "").strip()
+
         if title_deed_number:
-            easting_northing_matrix = extract_coordinates_from_addisland(title_deed_number)
+            easting_northing_matrix,save_as_pdf_link = extract_coordinates_from_addisland(title_deed_number)
             if easting_northing_matrix:
                 map_html = convert_and_plot(easting_northing_matrix, title=title_deed_number)
                 print("✅ Plot the coordinates over Folium map!")
             else:
                 map_html = "<p style='color:red;'>Failed to retrieve coordinates.</p>"
 
-    return render_template("index.html", map_html=map_html, title_deed_number=title_deed_number)
+    return render_template("index.html", map_html=map_html, title_deed_number=title_deed_number, save_as_pdf_link = save_as_pdf_link)
 
+# 🚀 NEW ROUTE: Extract PDF Export Link
+@app.route("/extract_pdf_links")
+def extract_pdf_links():
+    target_url = "https://www.addisland.gov.et/YOUR_PAGE_CONTAINING_LINKS"
+
+    try:
+        response = requests.get(target_url)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, 'html.parser')
+
+        # Regular Expression to Find the PDF Export Link
+        pdf_pattern = re.compile(r"https:\/\/www\.addisland\.gov\.et\/Reserved\.ReportViewerWebControl\.axd\?[^\"\']*Format=PDF")
+
+        # Extract All Matching PDF Links
+        pdf_links = [a["href"] for a in soup.find_all("a", href=True) if pdf_pattern.search(a["href"])]
+
+        return jsonify({"pdf_links": pdf_links}), 200 if pdf_links else (jsonify({"error": "No PDF export links found."}), 404)
+
+    except requests.RequestException as e:
+        return jsonify({"error": f"Failed to fetch page: {str(e)}"}), 500
+    
 
 if __name__ == "__main__":
     app.run(debug=True)
